@@ -1,6 +1,10 @@
 Release History
 ===============
 
+2.4.0 (2015-12-xx)
+------------------
+- Added inventory script sub-command
+
 2.3.1 (2015-12-10)
 ------------------
 
@@ -8,6 +12,7 @@ Release History
 - Changed extra_vars behavior to be more compliant by re-parsing vars,
   even when only one source exists
 - Fixed group modify bug, avoid sending unwanted fields in modify requests
+- Added ability to declare user organization admin
 
 2.3.0 (2015-10-20)
 ------------------

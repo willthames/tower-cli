@@ -32,6 +32,8 @@ A few potential uses include:
    Bamboo, etc)
 -  Checking on job statuses
 -  Rapidly creating objects like organizations, users, teams, and more
+-  Pull in `dynamic inventory scripts </docs/inventory_script.rst>`__
+   from Ansible Tower .
 
 Installation
 ------------
