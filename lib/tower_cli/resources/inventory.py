@@ -35,14 +35,16 @@ class Resource(models.Resource):
     @click.option('--hostvars', required=False, type=int,
                   help='Set to 1 to include host variables')
     def script(self, pk=None, format='json', **kwargs):
-        """Return the script output for an inventory."""
+        """Return Ansible dynamic inventory script output."""
 
         # set runtime value of format setting
         settings.format = format
 
         # pull out dictionary of values to pass in request
+        # also necessary in order to remove the script-specific parameters
+        # from the dictionary used for the inventory lookup
         payload = dict(
-            (k, kwargs[k]) for k in ['hostvars'] if k in kwargs
+            (k, kwargs.pop(k)) for k in ['hostvars'] if k in kwargs
         )
 
         # if primary key not given, look up via the standard get routine

@@ -5,12 +5,16 @@ The inventory script subcommand returns the output of dynamic inventory
 scripts in JSON format by default. It can be invoked by either the primary
 key or another set of parameters that uniquely specifies the inventory.
 
-For example, if the inventory was named "QA_machines" and had an primary
-key of 12, either of the following commands would be valid:
+For example, if the inventory was named ``QA_machines`` and had an primary
+key of ``12``, either of the following commands would be valid:
 
 .. code:: bash
 
     $ tower-cli inventory script --name="QA_machines"
+
+or
+
+.. code:: bash
 
     $ tower-cli inventory script 12
 
@@ -24,7 +28,8 @@ command can be leveraged to feed dynamic inventory into Ansible locally
 from Ansible Tower.
 
 Tower-cli will can act as a stand-in for a script that dynamically defines
-inventory. For example, consider the following file named `tower-inventory.sh`.
+inventory. For example, consider the following file
+named ```tower-inventory.sh``.
 
 .. code:: bash
 
