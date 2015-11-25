@@ -794,8 +794,10 @@ class MonitorableResource(ResourceMethods):
     @click.option('--timeout', required=False, type=int,
                   help='If provided, this command (not the job) will time out '
                        'after the given number of seconds.')
+    @click.option('--stdout', is_flag=True,
+                 help='Prints stdout on a rolling basis.')
     def monitor(self, pk, min_interval=1, max_interval=30,
-                timeout=None, outfile=sys.stdout, **kwargs):
+                timeout=None, stdout=True, outfile=sys.stdout, **kwargs):
         """Monitor a running job.
 
         Blocks further input until the job completes (whether successfully or
@@ -806,6 +808,17 @@ class MonitorableResource(ResourceMethods):
         interval = min_interval
         start = time.time()
 
+        # variables for the stdout stream
+        STDOUT_STEP = 500
+        WAITING_STR = "Waiting for results..."
+        start_line = 0
+        end_line = STDOUT_STEP
+        first_loop = True
+        stdout_url = '/jobs/%d/stdout/' % pk
+        payload = {'format': 'json', 'content_encoding': 'base64',
+                   'content_format': 'ansi',
+                   'start_line': start_line, 'end_line': end_line}
+
         # Poll the Ansible Tower instance for status, and print the status
         # to the outfile (usually standard out).
         #
@@ -815,6 +828,10 @@ class MonitorableResource(ResourceMethods):
         # and very much the normal use for this method should be CLI
         # monitoring.
         result = self.status(pk, detail=True)
+        if stdout:
+            resp = client.get(stdout_url, params=payload).json()
+            debug.log('resp '+str(resp), header='details')
+            content = resp['content']
         last_poll = time.time()
         timeout_check = 0
         while result['status'] != 'successful':
@@ -835,12 +852,19 @@ class MonitorableResource(ResourceMethods):
             # If the outfile is a TTY, print the current status.
             output = '\rCurrent status: %s%s' % (result['status'],
                                                  '.' * next(dots))
-            if longest_string > len(output):
-                output += ' ' * (longest_string - len(output))
+            if stdout and content != WAITING_STR:
+                secho(content)
+                line_count  = content.count('\n')
+                start_line += line_count
+                end_line   += STDOUT_STEP
+
             else:
-                longest_string = len(output)
-            if is_tty(outfile) and not settings.verbose:
-                secho(output, nl=False, file=outfile)
+                if longest_string > len(output):
+                    output += ' ' * (longest_string - len(output))
+                else:
+                    longest_string = len(output)
+                if is_tty(outfile) and not settings.verbose:
+                    secho(output, nl=False, file=outfile)
 
             # Put the process to sleep briefly.
             time.sleep(0.2)
@@ -866,6 +890,9 @@ class MonitorableResource(ResourceMethods):
             # to the next time that we intend to do a check, and once that
             # time hits, we do the status check as part of the normal cycle.
             if time.time() - last_poll > interval:
+                if stdout:
+                    resp = client.get(stdout_url, params=payload).json()
+                    content = resp['content']
                 result = self.status(pk, detail=True)
                 last_poll = time.time()
                 interval = min(interval * 1.5, max_interval)
