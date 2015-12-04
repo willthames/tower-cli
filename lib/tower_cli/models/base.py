@@ -25,6 +25,7 @@ import sys
 import time
 from copy import copy
 from sdict import adict
+from base64 import b64decode
 
 import six
 
@@ -818,6 +819,9 @@ class MonitorableResource(ResourceMethods):
         payload = {'format': 'json', 'content_encoding': 'base64',
                    'content_format': 'ansi',
                    'start_line': start_line, 'end_line': end_line}
+        # doing it just like cmeyers script now
+        payload = {}
+        stdout_url = "/jobs/%s/stdout/?format=json&content_encoding=base64&content_format=ansi&start_line=%s&end_line=%s" % (pk, start_line, end_line)
 
         # Poll the Ansible Tower instance for status, and print the status
         # to the outfile (usually standard out).
@@ -828,10 +832,11 @@ class MonitorableResource(ResourceMethods):
         # and very much the normal use for this method should be CLI
         # monitoring.
         result = self.status(pk, detail=True)
+        debug.log('stdout flag '+str(stdout), header='details')
         if stdout:
             resp = client.get(stdout_url, params=payload).json()
             debug.log('resp '+str(resp), header='details')
-            content = resp['content']
+            content = b64decode(resp['content'])
         last_poll = time.time()
         timeout_check = 0
         while result['status'] != 'successful':
@@ -849,16 +854,11 @@ class MonitorableResource(ResourceMethods):
             if timeout and timeout_check - start > timeout:
                 raise exc.Timeout('Monitoring aborted due to timeout.')
 
-            # If the outfile is a TTY, print the current status.
-            output = '\rCurrent status: %s%s' % (result['status'],
-                                                 '.' * next(dots))
-            if stdout and content != WAITING_STR:
-                secho(content)
-                line_count  = content.count('\n')
-                start_line += line_count
-                end_line   += STDOUT_STEP
+            if not (stdout and (result['status'] == 'running')):
+                # If the outfile is a TTY, print the current status.
+                output = '\rCurrent status: %s%s' % (result['status'],
+                                                     '.' * next(dots))
 
-            else:
                 if longest_string > len(output):
                     output += ' ' * (longest_string - len(output))
                 else:
@@ -890,18 +890,30 @@ class MonitorableResource(ResourceMethods):
             # to the next time that we intend to do a check, and once that
             # time hits, we do the status check as part of the normal cycle.
             if time.time() - last_poll > interval:
-                if stdout:
+                if stdout and (result['status'] == 'running'):
+                    stdout_url = "/jobs/%s/stdout/?format=json&content_encoding=base64&content_format=ansi&start_line=%s&end_line=%s" % (pk, start_line, end_line)
                     resp = client.get(stdout_url, params=payload).json()
-                    content = resp['content']
+                    debug.log('resp |'+str(b64decode(resp['content']))+"|", header='details')
+                    content = b64decode(resp['content'])
+
+                    # echo details and reset
+                    if len(content) > 0 and content != WAITING_STR:
+                        click.echo(content, nl=0)
+                    line_count  = content.count('\n')
+                    start_line += line_count
+                    end_line   += STDOUT_STEP
                 result = self.status(pk, detail=True)
                 last_poll = time.time()
-                interval = min(interval * 1.5, max_interval)
+                if not stdout:
+                    interval = min(interval * 1.5, max_interval)
 
-                # If the outfile is *not* a TTY, print a status update
-                # when and only when we make an actual check to job status.
-                if not is_tty(outfile) or settings.verbose:
-                    click.echo('Current status: %s' % result['status'],
-                               file=outfile)
+
+                if not (stdout and (result['status'] == 'running')):
+                    # If the outfile is *not* a TTY, print a status update
+                    # when and only when we make an actual check to job status.
+                    if not is_tty(outfile) or settings.verbose:
+                        click.echo('Current status: %s' % result['status'],
+                                   file=outfile)
 
             # Wipe out the previous output
             if is_tty(outfile) and not settings.verbose:
