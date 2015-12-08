@@ -81,6 +81,16 @@ def jt_vars_registration(t, extra_vars):
                     method='POST')
 
 
+def monitor_registration(t):
+    """ Endpoints common to any monitoring task are registered here. """
+
+    # Do standard registration first
+    standard_registration(t)
+
+    # Endpoint used for standard out streaming
+    t.register_json('/jobs/42/stdout/', {'content': ''})
+
+
 class LaunchTests(unittest.TestCase):
     """A set of tests for ensuring that the job resource's launch command
     works in the way we expect.
@@ -135,10 +145,10 @@ class LaunchTests(unittest.TestCase):
         any invocation-time input, and that monitor is called if requested.
         """
         with client.test_mode as t:
-            standard_registration(t)
+            monitor_registration(t)
             with mock.patch.object(type(self.res), 'monitor') as monitor:
                 self.res.launch(1, monitor=True)
-                monitor.assert_called_once_with(42, timeout=None)
+                monitor.assert_called_once_with(42, timeout=None, stdout=False)
 
     def test_extra_vars_at_runtime(self):
         """Establish that if we should be asking for extra variables at

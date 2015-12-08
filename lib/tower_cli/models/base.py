@@ -796,7 +796,7 @@ class MonitorableResource(ResourceMethods):
                   help='If provided, this command (not the job) will time out '
                        'after the given number of seconds.')
     @click.option('--stdout', is_flag=True,
-                 help='Prints stdout on a rolling basis.')
+                  help='Prints stdout on a rolling basis.')
     def monitor(self, pk, min_interval=1, max_interval=30,
                 timeout=None, stdout=True, outfile=sys.stdout, **kwargs):
         """Monitor a running job.
@@ -814,14 +814,11 @@ class MonitorableResource(ResourceMethods):
         WAITING_STR = "Waiting for results..."
         start_line = 0
         end_line = STDOUT_STEP
-        first_loop = True
+        content = ""
         stdout_url = '/jobs/%d/stdout/' % pk
         payload = {'format': 'json', 'content_encoding': 'base64',
                    'content_format': 'ansi',
                    'start_line': start_line, 'end_line': end_line}
-        # doing it just like cmeyers script now
-        payload = {}
-        stdout_url = "/jobs/%s/stdout/?format=json&content_encoding=base64&content_format=ansi&start_line=%s&end_line=%s" % (pk, start_line, end_line)
 
         # Poll the Ansible Tower instance for status, and print the status
         # to the outfile (usually standard out).
@@ -832,11 +829,6 @@ class MonitorableResource(ResourceMethods):
         # and very much the normal use for this method should be CLI
         # monitoring.
         result = self.status(pk, detail=True)
-        debug.log('stdout flag '+str(stdout), header='details')
-        if stdout:
-            resp = client.get(stdout_url, params=payload).json()
-            debug.log('resp '+str(resp), header='details')
-            content = b64decode(resp['content'])
         last_poll = time.time()
         timeout_check = 0
         while result['status'] != 'successful':
@@ -891,22 +883,23 @@ class MonitorableResource(ResourceMethods):
             # time hits, we do the status check as part of the normal cycle.
             if time.time() - last_poll > interval:
                 if stdout and (result['status'] == 'running'):
-                    stdout_url = "/jobs/%s/stdout/?format=json&content_encoding=base64&content_format=ansi&start_line=%s&end_line=%s" % (pk, start_line, end_line)
+                    payload['start_line'] = start_line
+                    payload['end_line'] = end_line
+                    debug.log('Checking server for updates to stdandard out',
+                              header='details')
                     resp = client.get(stdout_url, params=payload).json()
-                    debug.log('resp |'+str(b64decode(resp['content']))+"|", header='details')
                     content = b64decode(resp['content'])
 
                     # echo details and reset
                     if len(content) > 0 and content != WAITING_STR:
                         click.echo(content, nl=0)
-                    line_count  = content.count('\n')
+                    line_count = content.count('\n')
                     start_line += line_count
-                    end_line   += STDOUT_STEP
+                    end_line += STDOUT_STEP
                 result = self.status(pk, detail=True)
                 last_poll = time.time()
                 if not stdout:
                     interval = min(interval * 1.5, max_interval)
-
 
                 if not (stdout and (result['status'] == 'running')):
                     # If the outfile is *not* a TTY, print a status update
