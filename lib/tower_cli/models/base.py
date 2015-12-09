@@ -798,7 +798,7 @@ class MonitorableResource(ResourceMethods):
     @click.option('--stdout', is_flag=True,
                   help='Prints stdout on a rolling basis.')
     def monitor(self, pk, min_interval=1, max_interval=30,
-                timeout=None, stdout=True, outfile=sys.stdout, **kwargs):
+                timeout=None, stdout=False, outfile=sys.stdout, **kwargs):
         """Monitor a running job.
 
         Blocks further input until the job completes (whether successfully or
@@ -815,7 +815,7 @@ class MonitorableResource(ResourceMethods):
         start_line = 0
         end_line = STDOUT_STEP
         content = ""
-        stdout_url = '/jobs/%d/stdout/' % pk
+        stdout_url = '%s%d/stdout/' % (self.endpoint, pk)
         payload = {'format': 'json', 'content_encoding': 'base64',
                    'content_format': 'ansi',
                    'start_line': start_line, 'end_line': end_line}

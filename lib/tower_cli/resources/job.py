@@ -51,8 +51,7 @@ class Resource(models.ExeResource):
                   help='If sent, immediately calls `job monitor` on the newly '
                        'launched job rather than exiting with a success.')
     @click.option('--stdout', is_flag=True,
-                  help='Stream the standard out from the Tower server '
-                       'try it, it\'s a blast!')
+                  help='Stream the standard out from the Tower server.')
     @click.option('--timeout', required=False, type=int,
                   help='If provided with --monitor, this command (not the job)'
                        ' will time out after the given number of seconds. '
