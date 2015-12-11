@@ -815,6 +815,7 @@ class MonitorableResource(ResourceMethods):
         start_line = 0
         end_line = STDOUT_STEP
         content = ""
+        not_yet_started = True
         stdout_url = '%s%d/stdout/' % (self.endpoint, pk)
         payload = {'format': 'json', 'content_encoding': 'base64',
                    'content_format': 'ansi',
@@ -846,7 +847,7 @@ class MonitorableResource(ResourceMethods):
             if timeout and timeout_check - start > timeout:
                 raise exc.Timeout('Monitoring aborted due to timeout.')
 
-            if not (stdout and (result['status'] == 'running')):
+            if not stdout or result['status'] != 'running':
                 # If the outfile is a TTY, print the current status.
                 output = '\rCurrent status: %s%s' % (result['status'],
                                                      '.' * next(dots))
@@ -907,11 +908,21 @@ class MonitorableResource(ResourceMethods):
                     if not is_tty(outfile) or settings.verbose:
                         click.echo('Current status: %s' % result['status'],
                                    file=outfile)
+                elif (not_yet_started and stdout and
+                        result['status'] == 'running'):
+                    secho('\r------Starting Standard Out Stream------',
+                          nl=False, file=outfile, fg='blue')
+                    secho(' ', nl=2, file=outfile)
+                    not_yet_started = False
 
             # Wipe out the previous output
             if is_tty(outfile) and not settings.verbose:
                 secho('\r' + ' ' * longest_string, file=outfile, nl=False)
                 secho('\r', file=outfile, nl=False)
+
+        if stdout:
+            secho('------End of Standard Out Stream------', nl=2,
+                  file=outfile, fg='blue')
 
         # Return the job ID and other response data
         answer = OrderedDict((

@@ -177,3 +177,13 @@ class Resource(models.ExeResource):
             return self.monitor(job_id, timeout=timeout, stdout=stdout)
 
         return result
+
+    @resources.command
+    def stdout(self, pk=None, **kwargs):
+        """Print out the plaintext standard out of the job to the command
+        line. Note that failed and incomplete jobs will not succeed in this
+        request.
+        """
+        stdout_data = client.get('/jobs/%d/stdout/?format=txt' % pk)
+        click.echo('\n' + str(stdout_data._content) + '\n')
+        return self.get(pk, **kwargs)
