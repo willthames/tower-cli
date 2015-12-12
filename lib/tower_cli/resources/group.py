@@ -31,7 +31,7 @@ class Resource(models.Resource):
     name = models.Field(unique=True)
     description = models.Field(required=False, display=False)
     inventory = models.Field(type=types.Related('inventory'))
-    variables = models.Field(type=types.File('r'), required=False,
+    variables = models.Field(type=types.Variable(), required=False,
                              display=False)
 
     # Basic options for the source

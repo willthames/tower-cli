@@ -20,7 +20,7 @@ import re
 import click
 
 import tower_cli
-from tower_cli.utils import debug, exceptions as exc
+from tower_cli.utils import debug, exceptions as exc, parser
 from tower_cli.utils.compat import OrderedDict
 
 
@@ -118,3 +118,16 @@ class Related(click.types.ParamType):
 
     def get_metavar(self, param):
         return self.resource_name.upper()
+
+
+class Variable(click.types.ParamType):
+    """Ansible varibles specified as a file or YAML/JSON text."""
+    name = 'variable'
+
+    def convert(self, value, param, ctx):
+        """Return the appropriate variable string."""
+        if value is None:
+            return None
+
+        # combine sources of extra variables
+        return parser.process_extra_vars([value], force_json=False)
