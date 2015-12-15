@@ -119,10 +119,10 @@ def process_extra_vars(extra_vars_list, force_json=True):
             opt_dict = string_to_dict(extra_vars_opt, allow_kv=True)
         # Rolling YAML-based string combination
         if any(line.startswith("#") for line in extra_vars_opt.split('\n')):
-            extra_vars_yaml += extra_vars_opt + "\n"
+            extra_vars_yaml += extra_vars_opt.strip("\n") + "\n"
         elif extra_vars_opt != "":
             extra_vars_yaml += yaml.dump(
-                opt_dict, default_flow_style=False) + "\n"
+                opt_dict, default_flow_style=False).strip("\n") + "\n"
         # Combine dictionary with cumulative dictionary
         extra_vars.update(opt_dict)
 

@@ -18,6 +18,7 @@ import click
 from tower_cli import get_resource, models, resources
 from tower_cli.api import client
 from tower_cli.utils import exceptions as exc, types
+from tower_cli.utils.types import VariableOption
 
 INVENTORY_SOURCES = ['manual', 'ec2', 'rax', 'vmware',
                      'gce', 'azure', 'openstack']
@@ -31,8 +32,7 @@ class Resource(models.Resource):
     name = models.Field(unique=True)
     description = models.Field(required=False, display=False)
     inventory = models.Field(type=types.Related('inventory'))
-    variables = models.Field(type=types.Variable(), required=False,
-                             display=False)
+    variables = models.Field(required=False, display=False, yaml_vars=True)
 
     # Basic options for the source
     @click.option('--credential', type=types.Related('credential'),
@@ -44,7 +44,7 @@ class Resource(models.Resource):
     @click.option('--source-regions', help='Regions for your cloud provider.')
     # Options may not be valid for certain types of cloud servers
     @click.option('--source-vars', help='Override variables found on source '
-                  'with variables defined in this field.')
+                  'with variables defined in this field.', cls=VariableOption)
     @click.option('--overwrite', type=bool,
                   help='Delete child groups and hosts not found in source.')
     @click.option('--overwrite-vars', type=bool,
@@ -107,7 +107,7 @@ class Resource(models.Resource):
     @click.option('--source-regions', help='Regions for your cloud provider.')
     # Options may not be valid for certain types of cloud servers
     @click.option('--source-vars', help='Override variables found on source '
-                  'with variables defined in this field.')
+                  'with variables defined in this field.', cls=VariableOption)
     @click.option('--overwrite', type=bool,
                   help='Delete child groups and hosts not found in source.')
     @click.option('--overwrite-vars', type=bool,

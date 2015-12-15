@@ -61,6 +61,36 @@ class MappedChoice(click.Choice):
         return self.actual_choices[ix]
 
 
+class VariableOption(click.Option):
+    """A class associated with a command line option which can be passed
+    to the click.option decorator.
+    """
+    multiple = True
+
+    def __init__(self, *args, **kwargs):
+        """Set multiple to be true by default here"""
+        result = super(VariableOption, self).__init__(*args, **kwargs)
+        self.multiple = True
+        self.help = ('YAML or JSON variables. Start with "@" to '
+                     ' specify a file. Multiple flags allowed.')
+        return result
+
+    def type_cast_value(self, ctx, value):
+        """Normally used to run values through the type system, and array
+        into tuples for nargs > 1, this overwriten function collapses
+        the tuple of YAML/JSON variables into a single string.
+        """
+        result = super(VariableOption, self).type_cast_value(ctx, value)
+        if type(result) is tuple:
+            if len(result) >= 1 and list(result)[0] != "":
+                return parser.process_extra_vars(
+                    list(result), force_json=False)
+            else:
+                return None
+        else:
+            return result
+
+
 class Related(click.types.ParamType):
     """A subclass of click.types.ParamType that represents a value
     related to another resource.
@@ -118,16 +148,3 @@ class Related(click.types.ParamType):
 
     def get_metavar(self, param):
         return self.resource_name.upper()
-
-
-class Variable(click.types.ParamType):
-    """Ansible varibles specified as a file or YAML/JSON text."""
-    name = 'variable'
-
-    def convert(self, value, param, ctx):
-        """Return the appropriate variable string."""
-        if value is None:
-            return None
-
-        # combine sources of extra variables
-        return parser.process_extra_vars([value], force_json=False)

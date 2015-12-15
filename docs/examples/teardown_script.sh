@@ -43,10 +43,10 @@ tower-cli project delete --name="Ansible Examples"
 echo "Tower-CLI DATA FAKER: deleting orgs and teams"
 # Teams do not automatically go away when their organization is deleted
 # so we must delete them all
-tower-cli team delete --name Ops
-tower-cli team delete --name QA
-tower-cli team delete --name Dev
-tower-cli team delete --name Engineering
-tower-cli team delete --name "Tech Services"
+tower-cli team delete --name Ops --organization=Default
+tower-cli team delete --name QA --organization=Default
+tower-cli team delete --name Dev --organization=Default
+tower-cli team delete --name Engineering --organization="Bio Inc"
+tower-cli team delete --name "Tech Services" --organization="Bio Inc"
 tower-cli organization delete --name="Hyrule Ventures"
 tower-cli organization delete --name="Bio Inc"

@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import six
+from click import Option
+from tower_cli.utils.types import VariableOption
 
 
 _field_counter = 0
@@ -26,7 +28,8 @@ class Field(object):
     def __init__(self, key=None, type=six.text_type, default=None,
                  display=True, filterable=True, help_text=None,
                  is_option=True, password=False, read_only=False,
-                 required=True, show_default=False, unique=False):
+                 required=True, show_default=False, unique=False,
+                 yaml_vars=False):
         # Init the name to blank.
         # What's going on here: This is set by the ResourceMeta metaclass
         # when the **resource** is instantiated.
@@ -47,6 +50,10 @@ class Field(object):
         self.required = required
         self.show_default = show_default
         self.unique = unique
+        if yaml_vars:
+            self.cls = VariableOption
+        else:
+            self.cls = Option
 
         # If this is a password, display is always off.
         if self.password:
