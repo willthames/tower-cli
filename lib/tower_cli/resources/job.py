@@ -50,6 +50,8 @@ class Resource(models.ExeResource):
     @click.option('--monitor', is_flag=True, default=False,
                   help='If sent, immediately calls `job monitor` on the newly '
                        'launched job rather than exiting with a success.')
+    @click.option('--stdout', is_flag=True,
+                  help='Stream the standard out from the Tower server.')
     @click.option('--timeout', required=False, type=int,
                   help='If provided with --monitor, this command (not the job)'
                        ' will time out after the given number of seconds. '
@@ -62,7 +64,7 @@ class Resource(models.ExeResource):
     @click.option('--tags', required=False,
                   help='Specify tagged actions in the playbook to run.')
     def launch(self, job_template=None, tags=None, monitor=False, timeout=None,
-               no_input=True, extra_vars=None, **kwargs):
+               no_input=True, extra_vars=None, stdout=False, **kwargs):
         """Launch a new job based on a job template.
 
         Creates a new job in Ansible Tower, immediately starts it, and
@@ -184,6 +186,16 @@ class Resource(models.ExeResource):
         # If we were told to monitor the job once it started, then call
         # monitor from here.
         if monitor:
-            return self.monitor(job_id, timeout=timeout)
+            return self.monitor(job_id, timeout=timeout, stdout=stdout)
 
         return result
+
+    @resources.command
+    def stdout(self, pk=None, **kwargs):
+        """Print out the plaintext standard out of the job to the command
+        line. Note that failed and incomplete jobs will not succeed in this
+        request.
+        """
+        stdout_data = client.get('/jobs/%d/stdout/?format=txt' % pk)
+        click.echo('\n' + str(stdout_data._content) + '\n')
+        return self.get(pk, **kwargs)

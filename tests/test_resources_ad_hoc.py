@@ -127,7 +127,7 @@ class LaunchTests(unittest.TestCase):
             with mock.patch.object(type(self.res), 'monitor') as monitor:
                 self.res.launch(inventory=1, machine_credential=2,
                                 module_args="echo 'hi'", monitor=True)
-                monitor.assert_called_once_with(42, timeout=None)
+                monitor.assert_called_once_with(42, timeout=None, stdout=False)
 
 
 class StatusTests(unittest.TestCase):

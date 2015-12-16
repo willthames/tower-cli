@@ -25,6 +25,7 @@ import sys
 import time
 from copy import copy
 from sdict import adict
+from base64 import b64decode
 
 import six
 
@@ -795,8 +796,10 @@ class MonitorableResource(ResourceMethods):
     @click.option('--timeout', required=False, type=int,
                   help='If provided, this command (not the job) will time out '
                        'after the given number of seconds.')
+    @click.option('--stdout', is_flag=True,
+                  help='Prints stdout on a rolling basis.')
     def monitor(self, pk, min_interval=1, max_interval=30,
-                timeout=None, outfile=sys.stdout, **kwargs):
+                timeout=None, stdout=False, outfile=sys.stdout, **kwargs):
         """Monitor a running job.
 
         Blocks further input until the job completes (whether successfully or
@@ -806,6 +809,18 @@ class MonitorableResource(ResourceMethods):
         longest_string = 0
         interval = min_interval
         start = time.time()
+
+        # variables for the stdout stream
+        STDOUT_STEP = 500
+        WAITING_STR = "Waiting for results..."
+        start_line = 0
+        end_line = STDOUT_STEP
+        content = ""
+        not_yet_started = True
+        stdout_url = '%s%d/stdout/' % (self.endpoint, pk)
+        payload = {'format': 'json', 'content_encoding': 'base64',
+                   'content_format': 'ansi',
+                   'start_line': start_line, 'end_line': end_line}
 
         # Poll the Ansible Tower instance for status, and print the status
         # to the outfile (usually standard out).
@@ -833,15 +848,17 @@ class MonitorableResource(ResourceMethods):
             if timeout and timeout_check - start > timeout:
                 raise exc.Timeout('Monitoring aborted due to timeout.')
 
-            # If the outfile is a TTY, print the current status.
-            output = '\rCurrent status: %s%s' % (result['status'],
-                                                 '.' * next(dots))
-            if longest_string > len(output):
-                output += ' ' * (longest_string - len(output))
-            else:
-                longest_string = len(output)
-            if is_tty(outfile) and not settings.verbose:
-                secho(output, nl=False, file=outfile)
+            if not stdout or result['status'] != 'running':
+                # If the outfile is a TTY, print the current status.
+                output = '\rCurrent status: %s%s' % (result['status'],
+                                                     '.' * next(dots))
+
+                if longest_string > len(output):
+                    output += ' ' * (longest_string - len(output))
+                else:
+                    longest_string = len(output)
+                if is_tty(outfile) and not settings.verbose:
+                    secho(output, nl=False, file=outfile)
 
             # Put the process to sleep briefly.
             time.sleep(0.2)
@@ -867,20 +884,46 @@ class MonitorableResource(ResourceMethods):
             # to the next time that we intend to do a check, and once that
             # time hits, we do the status check as part of the normal cycle.
             if time.time() - last_poll > interval:
+                if stdout and (result['status'] == 'running'):
+                    payload['start_line'] = start_line
+                    payload['end_line'] = end_line
+                    debug.log('Checking server for updates to stdandard out',
+                              header='details')
+                    resp = client.get(stdout_url, params=payload).json()
+                    content = b64decode(resp['content'])
+
+                    # echo details and reset
+                    if len(content) > 0 and content != WAITING_STR:
+                        click.echo(content, nl=0)
+                    line_count = content.count('\n')
+                    start_line += line_count
+                    end_line += STDOUT_STEP
                 result = self.status(pk, detail=True)
                 last_poll = time.time()
-                interval = min(interval * 1.5, max_interval)
+                if not stdout:
+                    interval = min(interval * 1.5, max_interval)
 
-                # If the outfile is *not* a TTY, print a status update
-                # when and only when we make an actual check to job status.
-                if not is_tty(outfile) or settings.verbose:
-                    click.echo('Current status: %s' % result['status'],
-                               file=outfile)
+                if not (stdout and (result['status'] == 'running')):
+                    # If the outfile is *not* a TTY, print a status update
+                    # when and only when we make an actual check to job status.
+                    if not is_tty(outfile) or settings.verbose:
+                        click.echo('Current status: %s' % result['status'],
+                                   file=outfile)
+                elif (not_yet_started and stdout and
+                        result['status'] == 'running'):
+                    secho('\r------Starting Standard Out Stream------',
+                          nl=False, file=outfile, fg='blue')
+                    secho(' ', nl=2, file=outfile)
+                    not_yet_started = False
 
             # Wipe out the previous output
             if is_tty(outfile) and not settings.verbose:
                 secho('\r' + ' ' * longest_string, file=outfile, nl=False)
                 secho('\r', file=outfile, nl=False)
+
+        if stdout:
+            secho('------End of Standard Out Stream------', nl=2,
+                  file=outfile, fg='blue')
 
         # Return the job ID and other response data
         answer = OrderedDict((
