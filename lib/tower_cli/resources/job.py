@@ -97,8 +97,8 @@ class Resource(models.ExeResource):
 
         # If the job template requires prompting for extra variables,
         # do so (unless --no-input is set).
-        if data.pop('ask_variables_on_launch', False) and not no_input \
-                and not extra_vars:
+        if (data.pop('ask_variables_on_launch', False) or data.get(
+                'survey_enabled', False)) and not extra_vars and not no_input:
             # If JT extra_vars are JSON, echo them to user as YAML
             initial = parser.process_extra_vars(
                 [data['extra_vars']], force_json=False
@@ -108,6 +108,18 @@ class Resource(models.ExeResource):
                 '# Lines beginning with "#" denote comments.',
                 initial,
             ))
+            # Survey questions, variables, types, and defaults
+            # added to the editor's initial canvas
+            if data.get('survey_enabled', False):
+                initial += '\n# SURVEY QUESTIONS'
+                survey_spec = client.get(
+                    '/job_templates/%s/survey_spec/' % jt['id']).json()
+                for q in survey_spec['spec']:
+                    initial += (
+                        '\n\n# Survey Question: ' +
+                        q['question_name'] + '\n# (' + q['type'] + ')' +
+                        '\n' + q['variable'] + ': ' + str(q['default']))
+            # Create the extra_vars parameter from the user input
             extra_vars = click.edit(initial) or ''
             if extra_vars != initial:
                 extra_vars_list = [extra_vars]
