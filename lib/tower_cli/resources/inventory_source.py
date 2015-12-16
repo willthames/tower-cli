@@ -36,7 +36,7 @@ class Resource(models.MonitorableResource):
     )
     source_regions = models.Field(required=False, display=False)
     # Variables not shared by all cloud providers
-    source_vars = models.Field(required=False, display=False)
+    source_vars = models.Field(required=False, display=False, yaml_vars=True)
     # Boolean variables
     overwrite = models.Field(type=bool, required=False, display=False)
     overwrite_vars = models.Field(type=bool, required=False, display=False)

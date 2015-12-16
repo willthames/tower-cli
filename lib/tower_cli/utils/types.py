@@ -20,7 +20,7 @@ import re
 import click
 
 import tower_cli
-from tower_cli.utils import debug, exceptions as exc
+from tower_cli.utils import debug, exceptions as exc, parser
 from tower_cli.utils.compat import OrderedDict
 
 
@@ -59,6 +59,36 @@ class MappedChoice(click.Choice):
         choice = super(MappedChoice, self).convert(value, param, ctx)
         ix = self.choices.index(choice)
         return self.actual_choices[ix]
+
+
+class VariableOption(click.Option):
+    """A class associated with a command line option which can be passed
+    to the click.option decorator.
+    """
+    multiple = True
+
+    def __init__(self, *args, **kwargs):
+        """Set multiple to be true by default here"""
+        result = super(VariableOption, self).__init__(*args, **kwargs)
+        self.multiple = True
+        self.help = ('YAML or JSON variables. Start with "@" to '
+                     ' specify a file. Multiple flags allowed.')
+        return result
+
+    def type_cast_value(self, ctx, value):
+        """Normally used to run values through the type system, and array
+        into tuples for nargs > 1, this overwriten function collapses
+        the tuple of YAML/JSON variables into a single string.
+        """
+        result = super(VariableOption, self).type_cast_value(ctx, value)
+        if type(result) is tuple:
+            if len(result) >= 1 and list(result)[0] != "":
+                return parser.process_extra_vars(
+                    list(result), force_json=False)
+            else:
+                return None
+        else:
+            return result
 
 
 class Related(click.types.ParamType):

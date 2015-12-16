@@ -106,17 +106,17 @@ tower-cli credential create --name=user2 --username=user2 --password=pass1 --tea
 
 echo "Tower-CLI DATA FAKER: creating inventories and groups"
 # Basic localhost examples
-tower-cli inventory create --name=localhost --description="local machine" --organization=Default --variables="variables.yml"
-tower-cli host create --name="127.0.0.1" --description="the host in localhost" --inventory="localhost" --variables="variables.yml"
+tower-cli inventory create --name=localhost --description="local machine" --organization=Default --variables="@variables.yml"
+tower-cli host create --name="127.0.0.1" --description="the host in localhost" --inventory="localhost" --variables="@variables.yml"
 # Corporate example uses localhost with special vars for testing
-tower-cli inventory create --name=Production --description="Production Machines" --organization="Hyrule Ventures" --variables="variables.yml"
+tower-cli inventory create --name=Production --description="Production Machines" --organization="Hyrule Ventures" --variables="@variables.yml"
 tower-cli group create --name=EC2 --credential="AWS creds" --source=ec2 --description="EC2 hosts" --inventory=Production
 tower-cli group create --name=RAX --credential="RAX creds" --source=rax --description="RAX hosts" --inventory=Production
 # EC2vars demonstrates the use of advanced source variables
 tower-cli group create --name=EC2vars --credential="AWS creds" --source=ec2 --description="EC2 hosts" --inventory=Production --source-regions="us-east-1" --overwrite=true --overwrite-vars=false --source-vars="foo: bar"
 # Another example
-tower-cli inventory create --name="Testing" --description="Test Machines" --organization="Bio Inc" --variables="variables.yml"
-tower-cli group create --name=web --source=manual --inventory=Testing --variables="variables.yml"
+tower-cli inventory create --name="Testing" --description="Test Machines" --organization="Bio Inc" --variables="@variables.yml"
+tower-cli group create --name=web --source=manual --inventory=Testing --variables="@variables.yml"
 tower-cli host create --name="10.42.0.6" --inventory=Testing
 tower-cli host create --name="10.42.0.7" --inventory=Testing
 tower-cli host create --name="10.42.0.8" --inventory=Testing
@@ -124,10 +124,10 @@ tower-cli host create --name="10.42.0.9" --inventory=Testing
 tower-cli host create --name="10.42.0.10" --inventory=Testing
 # Another inventory, but with recursive structure
 # these include databases and web servers, with hosts in the web server group
-tower-cli inventory create --name=QA --description="QA Machines" --organization=Default --variables="variables.yml"
-tower-cli group create --name="databases" --source=manual --inventory=QA --variables="variables.yml"
+tower-cli inventory create --name=QA --description="QA Machines" --organization=Default --variables="@variables.yml"
+tower-cli group create --name="databases" --source=manual --inventory=QA --variables="@variables.yml"
 # Setting up the web servers, associate hosts with the group
-tower-cli group create --name="web servers" --source=manual --inventory=QA --variables="variables.yml"
+tower-cli group create --name="web servers" --source=manual --inventory=QA --variables="@variables.yml"
 tower-cli host create --name="server.example1.com" --inventory=QA
 tower-cli host associate --host="server.example1.com" --group="web servers"
 tower-cli host create --name="server.example2.com" --inventory=QA

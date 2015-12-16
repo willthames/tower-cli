@@ -25,5 +25,4 @@ class Resource(models.Resource):
     name = models.Field(unique=True)
     description = models.Field(required=False, display=False)
     organization = models.Field(type=types.Related('organization'))
-    variables = models.Field(type=models.File('r'), required=False,
-                             display=False)
+    variables = models.Field(required=False, display=False, yaml_vars=True)
