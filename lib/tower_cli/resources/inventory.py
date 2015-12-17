@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import click
-
 from tower_cli import models, resources
 from tower_cli.utils import types, debug
 from tower_cli.api import client
@@ -32,13 +30,14 @@ class Resource(models.Resource):
     variables = models.Field(required=False, display=False, yaml_vars=True)
 
     @resources.command
-    @click.option('--hostvars', required=False, type=int,
-                  help='Set to 1 to include host variables')
-    def script(self, pk=None, format='json', **kwargs):
+    def script(self, pk=None, format=None, **kwargs):
         """Return Ansible dynamic inventory script output."""
 
         # set runtime value of format setting
-        settings.format = format
+        settings.format = 'json'
+
+        # hostvars necessary to get usable script
+        kwargs['hostvars'] = 1
 
         # pull out dictionary of values to pass in request
         # also necessary in order to remove the script-specific parameters

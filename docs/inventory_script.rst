@@ -1,8 +1,9 @@
 Inventory Script Subcommand
 ===========================
 
-The inventory script subcommand returns the output of dynamic inventory
-scripts in JSON format by default. It can be invoked by either the primary
+The tower-cli inventory script subcommand returns information about an
+inventory in JSON format, consistent with Ansible standards for dynamic
+inventory. It can be invoked by either the primary
 key or another set of parameters that uniquely specifies the inventory.
 
 For example, if the inventory was named ``QA_machines`` and had an primary
@@ -20,22 +21,32 @@ or
 
 These commands will return text in JSON format.
 
-Example Usage
--------------
+Usage
+-----
 
-As a part of bash scripting (or some other automated workflow), this
-command can be leveraged to feed dynamic inventory into Ansible locally
+This command can be leveraged to feed dynamic inventory into Ansible locally
 from Ansible Tower.
 
-Tower-cli will can act as a stand-in for a script that dynamically defines
-inventory. For example, consider the following file
-named ```tower-inventory.sh``.
+This can be implemented by feeding the command's output into Ansible through
+the ```-i``` flag. However, an executable file is needed to act as a wrapper
+in this usage. One possible option to do this is described below.
+
+Manual Bash Wrapper Setup
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create a file named ```tower-inventory.sh`` with the following contents.
 
 .. code:: bash
 
     #!/bin/bash
 
-    tower-cli inventory script $TOWER_INVENTORY_ID --hostvars=1
+    tower-cli inventory script $TOWER_INVENTORY_ID
+
+Save the file, and change its permissions to be executable.
+
+.. code:: bash
+
+    chmod +x tower-inventory.sh
 
 While in the same directory, the following command will list the hosts via
 Ansible in its command-line usage.
