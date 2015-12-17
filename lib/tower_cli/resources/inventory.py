@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tower_cli import models
-from tower_cli.utils import types
+from tower_cli import models, resources
+from tower_cli.utils import types, debug
+from tower_cli.api import client
+from tower_cli.conf import settings
 
 
 class Resource(models.Resource):
@@ -26,3 +28,33 @@ class Resource(models.Resource):
     description = models.Field(required=False, display=False)
     organization = models.Field(type=types.Related('organization'))
     variables = models.Field(required=False, display=False, yaml_vars=True)
+
+    @resources.command
+    def script(self, pk=None, format=None, **kwargs):
+        """Return Ansible dynamic inventory script output."""
+
+        # set runtime value of format setting
+        settings.format = 'json'
+
+        # hostvars necessary to get usable script
+        kwargs['hostvars'] = 1
+
+        # pull out dictionary of values to pass in request
+        # also necessary in order to remove the script-specific parameters
+        # from the dictionary used for the inventory lookup
+        payload = dict(
+            (k, kwargs.pop(k)) for k in ['hostvars'] if k in kwargs
+        )
+
+        # if primary key not given, look up via the standard get routine
+        if not pk:
+            get_resp = self.get(**kwargs)
+            pk = get_resp['id']
+
+        # make the request to /inventories/pk/script/
+        debug.log('Getting script for inventory.', header='details')
+        script_url = '%s%d/script/' % (self.endpoint, pk)
+        r = client.get(script_url, params=payload)
+        resp = r.json()
+
+        return resp
