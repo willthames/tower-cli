@@ -1,5 +1,5 @@
-# Copyright 2015, Ansible, Inc.
-# Luke Sneeringer <lsneeringer@ansible.com>
+# Copyright 2016, Red Hat
+# Alan Rominger <arominge@redhat.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ class Resource(models.Resource):
     cli_help = 'Manage permissions within Ansible Tower.'
     endpoint = '/permissions/'
     identity = ('name', )
+    no_lookup_flag = False
 
     # Permissions must be created for either a user or a team
     name = models.Field(unique=True, required=False, display=True)
@@ -51,37 +52,43 @@ class Resource(models.Resource):
         type=bool, required=False, display=False,
         help_text='If "true", includes permission to run ad hoc commands')
 
-    def get_base_url(self, user, team):
-        """Return a string that specifies the endpoint to use"""
-        if not user and not team:
-            raise exc.TowerCLIError('Specify either a user or a team.')
-        elif user:
-            return '/users/%d/permissions/' % user
+    def set_base_url(self, user, team):
+        """Assure that endpoint is nested under a user or team"""
+        if self.no_lookup_flag:
+            return
+        if user:
+            self.endpoint = '/users/%d/permissions/' % user
+        elif team:
+            self.endpoint = '/teams/%d/permissions/' % team
         else:
-            return '/teams/%d/permissions/' % team
+            raise exc.TowerCLIError('Specify either a user or a team.')
+        self.no_lookup_flag = True
 
     def get_permission_pk(self, pk, user, team, **kwargs):
         """Return the pk with a search method specific to permissions."""
         if not pk:
-            self.endpoint = self.get_base_url(user, team)
-            debug.log('Checking for an existing record.', header='details')
+            self.set_base_url(user, team)
+            debug.log('Checking for existing permission.', header='details')
             existing_data = self._lookup(
                 fail_on_found=False, fail_on_missing=True,
                 include_debug_header=False, **kwargs)
             return existing_data['id']
         else:
+            self.no_lookup_flag = True
             return pk
 
+    @resources.command
     def create(self, user=None, team=None, **kwargs):
         """Create a permission. Provide one of each:
               Permission granted to: user or team.
               Permission to: inventory or project."""
-        self.endpoint = self.get_base_url(user, team)
+        self.set_base_url(user, team)
         # Apply default specific to creation
         if not kwargs.get('permission_type', None):
             kwargs['permission_type'] = 'read'
         return super(Resource, self).create(**kwargs)
 
+    @resources.command
     def modify(self, pk=None, user=None, team=None, **kwargs):
         """Modify an already existing permission.
 
@@ -96,6 +103,7 @@ class Resource(models.Resource):
         self.endpoint = '/permissions/'
         return super(Resource, self).modify(pk=pk, **kwargs)
 
+    @resources.command
     def delete(self, pk=None, user=None, team=None, **kwargs):
         """Remove the given permission.
 
@@ -118,7 +126,7 @@ class Resource(models.Resource):
         Provide pk for permission. Alternatively, provide name and the
         parent user/team.
         """
-        self.endpoint = self.get_base_url(user, team)
+        self.set_base_url(user, team)
         return super(Resource, self).get(pk=pk, **kwargs)
 
     @resources.command(ignore_defaults=True, no_args_is_help=False)
@@ -131,5 +139,5 @@ class Resource(models.Resource):
         If no filters are provided, return all results. But you still must
         give a user or team because a global listing is not allowed.
         """
-        self.endpoint = self.get_base_url(user, team)
+        self.set_base_url(user, team)
         return super(Resource, self).list(all_pages=all_pages, **kwargs)
