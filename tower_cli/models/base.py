@@ -751,7 +751,7 @@ class MonitorableResource(BaseResource):
     @resources.command
     @click.option('--start-line', required=False, type=int, help='Line at which to start printing the standard out.')
     @click.option('--end-line', required=False, type=int, help='Line at which to end printing the standard out.')
-    def stdout(self, pk, start_line=None, end_line=None, outfile=sys.stdout, **kwargs):
+    def stdout(self, pk, start_line=None, end_line=None, outfile=sys.stdout, color=None, **kwargs):
         """
         Print out the standard out of a unified job to the command line or output file.
         For Projects, print the standard out of most recent update.
@@ -772,6 +772,8 @@ class MonitorableResource(BaseResource):
         :param end_line: Line at which to end printing job output
         :param outfile: Alternative file than stdout to write job stdout to.
         :type outfile: file
+        :param color: Whether color is supported. Defaults to auto-detection.
+        :type color: bool
         :param `**kwargs`: Keyword arguments used to look up job resource object to monitor if ``pk`` is
                            not provided.
         :returns: A dictionary containing changed=False
@@ -788,7 +790,7 @@ class MonitorableResource(BaseResource):
 
         content = self.lookup_stdout(pk, start_line, end_line)
         if len(content) > 0:
-            click.echo(content, nl=1, file=outfile)
+            click.echo(content, nl=1, file=outfile, color=color)
 
         return {"changed": False}
 
@@ -796,7 +798,7 @@ class MonitorableResource(BaseResource):
     @click.option('--interval', default=0.2, help='Polling interval to refresh content from Tower.')
     @click.option('--timeout', required=False, type=int,
                   help='If provided, this command (not the job) will time out after the given number of seconds.')
-    def monitor(self, pk, parent_pk=None, timeout=None, interval=0.5, outfile=sys.stdout, **kwargs):
+    def monitor(self, pk, parent_pk=None, timeout=None, interval=0.5, outfile=sys.stdout, color=None, **kwargs):
         """
         Stream the standard output from a job, project update, or inventory udpate.
 
@@ -814,6 +816,8 @@ class MonitorableResource(BaseResource):
         :type interval: float
         :param outfile: Alternative file than stdout to write job stdout to.
         :type outfile: file
+        :param color: Whether color is supported. Defaults to auto-detection.
+        :type color: bool
         :param `**kwargs`: Keyword arguments used to look up job resource object to monitor if ``pk`` is
                            not provided.
         :returns: A dictionary combining the JSON output of the finished job resource object, as well as
@@ -840,7 +844,7 @@ class MonitorableResource(BaseResource):
         start_line = 0
         result = client.get(job_endpoint).json()
 
-        click.echo('\033[0;91m------Starting Standard Out Stream------\033[0m', nl=2, file=outfile)
+        click.echo('\033[0;91m------Starting Standard Out Stream------\033[0m', nl=2, file=outfile, color=color)
 
         # Poll the Ansible Tower instance for status and content, and print standard out to the out file
         while not result['failed'] and result['status'] != 'successful':
@@ -858,7 +862,7 @@ class MonitorableResource(BaseResource):
             if not content.startswith("Waiting for results"):
                 line_count = len(content.splitlines())
                 start_line += line_count
-                click.echo(content, nl=0, file=outfile)
+                click.echo(content, nl=0, file=outfile, color=color)
 
             if timeout and time.time() - start > timeout:
                 raise exc.Timeout('Monitoring aborted due to timeout.')
@@ -867,7 +871,7 @@ class MonitorableResource(BaseResource):
         if self.endpoint == '/workflow_jobs/':
             click.echo(self.lookup_stdout(pk, start_line, full=True), nl=1)
 
-        click.echo('\033[0;91m------End of Standard Out Stream--------\033[0m', nl=2, file=outfile)
+        click.echo('\033[0;91m------End of Standard Out Stream--------\033[0m', nl=2, file=outfile, color=color)
 
         if result['failed']:
             raise exc.JobFailure('Job failed.')
